@@ -28,7 +28,7 @@ COMMAND="${1:-up}"
 case "$COMMAND" in
   ""|"up")
     echo "🚀 Starting River-watch stack (core + sensors)..."
-    docker compose $COMPOSE_FILES up -d --remove-orphans
+    docker compose $COMPOSE_FILES up -d --build --remove-orphans
     if $PERSISTENT; then
       echo "🔒 Persistent mode enabled: volumes/data will be preserved."
     fi
@@ -51,7 +51,7 @@ case "$COMMAND" in
       docker compose $COMPOSE_FILES down -v
     fi
     sleep 3
-    docker compose $COMPOSE_FILES up -d --remove-orphans
+    docker compose $COMPOSE_FILES up -d --build --remove-orphans
     echo "✅ Stack restarted successfully."
     ;;
   *)

@@ -4,6 +4,8 @@ services:
       context: ./core
     ports:
       - "5000:5000"
+    env_file: ./core/.env
+    container_name: flask
     environment:
       MONGO_URI: mongodb://mongo:27017/riverwatch
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -13,6 +15,7 @@ services:
 
   mongo:
     image: mongo:latest
+    container_name: mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
