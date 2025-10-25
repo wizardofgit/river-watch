@@ -41,6 +41,7 @@ case "$COMMAND" in
     else
       docker compose $COMPOSE_FILES down -v
     fi
+    docker volume prune -f
     echo "✅ All services stopped and removed."
     ;;
   "restart")
