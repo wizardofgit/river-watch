@@ -22,6 +22,16 @@ The communication is via Kafka topics:
 - **data-topic** that provides readings from sensors
 - **control-topic** that provides control of pods (sensors) through the frontend
 
+## Routing
+The app can be accessed at `http://localhost:5000` after starting the docker container.  
+The Kafka broker is accessible at `localhost:9092`.
+The MongoDB is accessible at `localhost:27017`. Mongo Express is accessible at `http://localhost:8081`.  
+Redpanda is accessible at `http://localhost:8083`.
+
+## Data persistence
+All data is deleted when container is stopped as default. To persist data, 
+run `./run.sh -p` or `./run.sh --persistent` which will create local folders for MongoDB and Kafka data.
+
 # How to run
 
 ## Requirements
@@ -30,4 +40,12 @@ The communication is via Kafka topics:
 
 ## Starting the app
 To run the app make sure you have Docker installed and run `run.sh` script in the root folder.  
-This will build the docker image and start the container.
+This will build the docker image and start the container.  
+To stop the app, run `./run.sh down`.
+
+If using Windows, the script must be run using WSL (Windows Subsystem for Linux).  
+
+It can also be run by `./run.sh restart`, that will stop any running containers and start a new one.  
+
+Running the app with flag `-p` or `--persistent` will start the app with data persistence enabled, e.g.
+`./run.sh -p restart`.

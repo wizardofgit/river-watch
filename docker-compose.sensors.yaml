@@ -1,14 +1,11 @@
 services:
   sensor:
-    build: ./sensors
+    build:
+      context: ./sensors
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - FLASK_SERVER=http://flask:5000
-    networks:
-      - shared
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SENSOR_ID: ${SENSOR_ID:-1}
+    depends_on:
+      - kafka
     deploy:
       replicas: 5
-
-networks:
-  shared:
-    external: true

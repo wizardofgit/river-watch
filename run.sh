@@ -1,72 +1,61 @@
 #!/bin/bash
-set -e
+set -e  # exit on first error
 
-CORE_FILE="docker-compose.core.yml"
-SENSOR_FILE="docker-compose.sensors.yml"
-SENSOR_COUNT=${1:-5}
+COMPOSE_FILES="-f docker-compose.core.yaml -f docker-compose.sensors.yaml"
 
-GREEN="\e[32m"
-YELLOW="\e[33m"
-RED="\e[31m"
-RESET="\e[0m"
+PERSISTENT=false
 
-echo -e "${YELLOW}Starting core services (Flask, Kafka, MongoDB)...${RESET}"
-docker compose -f "$CORE_FILE" up -d
-
-# --- Wait for Kafka ---
-echo -e "${YELLOW}Waiting for Kafka to start...${RESET}"
-KAFKA_READY=false
-for i in {1..30}; do
-  if docker exec "$(docker compose -f $CORE_FILE ps -q kafka)" bash -c "nc -z localhost 9092" >/dev/null 2>&1; then
-    KAFKA_READY=true
-    break
-  fi
-  echo "Kafka not ready yet... ($i/30)"
-  sleep 2
+# Parse optional flags (supports -p or --persistent anywhere before the command)
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -p|--persistent)
+      PERSISTENT=true
+      shift
+      ;;
+    up|down|restart)
+      # command found; stop flag parsing
+      break
+      ;;
+    *)
+      # unknown token (could be empty or invalid), stop parsing
+      break
+      ;;
+  esac
 done
 
-if [ "$KAFKA_READY" = false ]; then
-  echo -e "${RED}❌ Kafka did not start in time.${RESET}"
-  exit 1
-fi
-echo -e "${GREEN}✅ Kafka is ready.${RESET}"
+COMMAND="${1:-up}"
 
-# --- Wait for Flask ---
-echo -e "${YELLOW}Waiting for Flask API to respond...${RESET}"
-FLASK_READY=false
-for i in {1..30}; do
-  if curl -s http://localhost:5000/ >/dev/null; then
-    FLASK_READY=true
-    break
-  fi
-  echo "Flask not ready yet... ($i/30)"
-  sleep 2
-done
-
-if [ "$FLASK_READY" = false ]; then
-  echo -e "${RED}❌ Flask API did not respond in time.${RESET}"
-  exit 1
-fi
-echo -e "${GREEN}✅ Flask API is ready.${RESET}"
-
-# --- Start sensors ---
-echo -e "${YELLOW}Starting $SENSOR_COUNT sensor containers...${RESET}"
-docker compose -f "$SENSOR_FILE" up -d --scale sensor=$SENSOR_COUNT
-
-echo -e "${GREEN}✅ All services are up and running!${RESET}"
-echo
-echo "Flask API:      http://localhost:5000"
-echo "MongoDB:        mongodb://localhost:27017"
-echo "Kafka (internal): kafka:9092"
-echo
-echo -e "${YELLOW}To stop everything:${RESET}"
-echo "  ./run.sh down"
-echo
-
-# --- Handle shutdown ---
-if [ "$1" == "down" ]; then
-  echo -e "${YELLOW}Stopping all services...${RESET}"
-  docker compose -f "$SENSOR_FILE" down
-  docker compose -f "$CORE_FILE" down
-  echo -e "${GREEN}✅ All containers stopped and removed.${RESET}"
-fi
+case "$COMMAND" in
+  ""|"up")
+    echo "🚀 Starting River-watch stack (core + sensors)..."
+    docker compose $COMPOSE_FILES up -d --remove-orphans
+    if $PERSISTENT; then
+      echo "🔒 Persistent mode enabled: volumes/data will be preserved."
+    fi
+    echo "✅ All services are up and running."
+    ;;
+  "down")
+    echo "🛑 Stopping River-watch stack..."
+    if $PERSISTENT; then
+      docker compose $COMPOSE_FILES down
+    else
+      docker compose $COMPOSE_FILES down -v
+    fi
+    echo "✅ All services stopped and removed."
+    ;;
+  "restart")
+    echo "🔄 Restarting River-watch stack..."
+    if $PERSISTENT; then
+      docker compose $COMPOSE_FILES down
+    else
+      docker compose $COMPOSE_FILES down -v
+    fi
+    sleep 3
+    docker compose $COMPOSE_FILES up -d --remove-orphans
+    echo "✅ Stack restarted successfully."
+    ;;
+  *)
+    echo "Usage: $0 [-p|--persistent] [up|down|restart]"
+    exit 1
+    ;;
+esac
